@@ -1,0 +1,17 @@
+# Segredos e Variáveis de Ambiente (MUITO IMPORTANTE)
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes Virtuais 
+venv/
+env/
+.venv/
+
+# VS Code
+.vscode/
+.python-version
