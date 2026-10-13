@@ -17,6 +17,6 @@ def coletar_ranking_players(pais="BR"):
 
 
 if __name__ == "__main__":
-    dados = coletar()
+    dados = coletar_ranking_players()
     print(len(dados["items"]), "jogadores")
     print([j["tag"] for j in dados["items"][:5]])
