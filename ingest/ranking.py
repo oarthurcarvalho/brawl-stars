@@ -1,19 +1,13 @@
-import os
-
 import requests
-from dotenv import load_dotenv
 from time import sleep
 
-load_dotenv()
-
-API = "https://api.brawlstars.com/v1"
+from api import API, cabecalho
 
 PAISES = ["BR", "AR", "PT", "ES", "FR", "DE", "IT", "GB", "NL", "PL"]
 
 def coletar_ranking_players(pais="BR"):
     
-    headers = {"Authorization": f"Bearer {os.environ['BRAWL_TOKEN']}"}
-    resposta = requests.get(f"{API}/rankings/{pais}/players", headers=headers, timeout=30)
+    resposta = requests.get(f"{API}/rankings/{pais}/players", headers=cabecalho(), timeout=30)
     resposta.raise_for_status()
     return resposta.json()
 
