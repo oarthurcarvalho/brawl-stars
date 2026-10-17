@@ -1,12 +1,13 @@
 from pathlib import Path
 
 import pendulum
-from airflow.sdk import dag, task
+from airflow.decorators import dag, task
 
-# a DAG entra na pasta de DAGs do Airflow por link simbólico, então resolve() aponta para o repositório
+# o repositório é montado no container no mesmo caminho do Pi e a DAG entra na pasta de DAGs
+# por link simbólico, então resolve() aponta para o repositório tanto no Pi quanto no container
 REPO = Path(__file__).resolve().parent.parent
 PASTA_INGEST = str(REPO / "ingest")
-# ambiente do projeto, criado com o mesmo Python do Airflow e com o requirements.txt instalado
+# ambiente do projeto, criado com o Python do container do Airflow e com o requirements.txt instalado
 PYTHON_BRAWL = str(REPO / ".venv" / "bin" / "python")
 
 
