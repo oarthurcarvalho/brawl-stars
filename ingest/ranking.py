@@ -1,13 +1,13 @@
 import requests
 from time import sleep
 
-from api import API, cabecalho
+from api import API, cabecalho, sessao
 
 PAISES = ["BR", "AR", "PT", "ES", "FR", "DE", "IT", "GB", "NL", "PL"]
 
 def coletar_ranking_players(pais="BR"):
     
-    resposta = requests.get(f"{API}/rankings/{pais}/players", headers=cabecalho(), timeout=30)
+    resposta = sessao.get(f"{API}/rankings/{pais}/players", headers=cabecalho(), timeout=30)
     resposta.raise_for_status()
     return resposta.json()
 
