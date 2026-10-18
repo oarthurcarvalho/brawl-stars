@@ -16,6 +16,7 @@ PYTHON_BRAWL = str(REPO / ".venv" / "bin" / "python")
     schedule="0 5 * * 1",
     start_date=pendulum.datetime(2026, 10, 12, tz="America/Sao_Paulo"),
     catchup=False,
+    default_args={"retries": 2, "retry_delay": pendulum.duration(minutes=15)},
     tags=["brawl-stars"],
 )
 def brawlstars_painel():
