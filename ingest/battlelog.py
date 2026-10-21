@@ -43,7 +43,7 @@ def salvar_candidatos(menor_trofeu):
     with open(ARQUIVO_CANDIDATOS, "w", newline="", encoding="utf-8") as f:
         escritor = csv.writer(f)
         escritor.writerow(["tag", "trofeus_min"])
-        # do menor para o maior: é por aí que a coleta de perfis começa
+        # ordenado só para o arquivo sair igual a cada rodada; os perfis sorteiam a ordem (ver perfis.py)
         escritor.writerows(sorted(menor_trofeu.items(), key=lambda par: par[1]))
     enviar_r2(ARQUIVO_CANDIDATOS, CHAVE_CANDIDATOS)
 

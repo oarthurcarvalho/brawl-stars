@@ -14,13 +14,14 @@ COLETA_DIR = Path(os.environ.get("COLETA_DIR", "~/dados/brawl-stars")).expanduse
 BUCKET = "oarthurcarvalho-lake"
 
 
-def salvar_bruto(fonte, dados, pais):
+def salvar_bruto(fonte, dados, parte):
     agora = datetime.now(timezone.utc)
-    arquivo = COLETA_DIR / fonte / f"dt={agora:%Y-%m-%d}" / f"{pais}_{agora:%H%M%S}.json.gz"
+    arquivo = COLETA_DIR / fonte / f"dt={agora:%Y-%m-%d}" / f"{parte}_{agora:%H%M%S}.json.gz"
     arquivo.parent.mkdir(parents=True, exist_ok=True)
+    # parte = país no painel, lote nos perfis; arquivos de antes de 20/10 trazem a chave "pais"
     envelope = {
         "fonte": fonte,
-        "pais": pais,
+        "parte": parte,
         "coletado_em": agora.isoformat(timespec="seconds"),
         "dados": dados,
     }
