@@ -6,8 +6,11 @@ from collections import Counter
 
 from api import codificar_tag, coletar_em_paralelo, requisitar
 from armazenamento import COLETA_DIR, baixar_r2, enviar_r2, salvar_bruto
-from battlelog import ARQUIVO_CANDIDATOS, CHAVE_CANDIDATOS
 
+# pool de candidatos montado em battlelog.py (montar_candidatos); fica aqui para o battlelog
+# poder importar amostra -> perfis sem import circular
+ARQUIVO_CANDIDATOS = COLETA_DIR / "painel" / "candidatos.csv"
+CHAVE_CANDIDATOS = "painel/candidatos.csv"
 FONTE = "brawl_players"
 TAMANHO_LOTE = 1000
 PRIMEIRA_RODADA = 10000

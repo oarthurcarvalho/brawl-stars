@@ -4,20 +4,39 @@ import time
 
 import requests
 
-from api import API, cabecalho, codificar_tag, sessao
-from armazenamento import COLETA_DIR, baixar_r2, enviar_r2, salvar_bruto
+from amostra import ler_amostra
+from api import codificar_tag, coletar_em_paralelo, requisitar
+from armazenamento import baixar_r2, enviar_r2, salvar_bruto
 from painel import ARQUIVO_PAINEL, CHAVE_PAINEL
+from perfis import ARQUIVO_CANDIDATOS, CHAVE_CANDIDATOS
 
-ARQUIVO_CANDIDATOS = COLETA_DIR / "painel" / "candidatos.csv"
-CHAVE_CANDIDATOS = "painel/candidatos.csv"
+FONTE = "brawl_battlelogs"
+TAMANHO_LOTE = 1000
+# medido em 21/10: 5 threads -> 15 a 25 min para 10 mil; 10 threads -> ~9 min, sem nenhum 429
+THREADS = 10
 
 
 def coletar_battlelog(tag):
-    resposta = sessao.get(f"{API}/players/{codificar_tag(tag)}/battlelog", headers=cabecalho(), timeout=30)
+    resposta = requisitar(f"/players/{codificar_tag(tag)}/battlelog")
     if resposta.status_code == 404:
         return None
     resposta.raise_for_status()
     return resposta.json()
+
+
+def coletar_battlelogs(tags):
+    return coletar_em_paralelo(coletar_battlelog, tags, threads=THREADS)
+
+
+def coletar_dia():
+    tags = [linha["tag"] for linha in ler_amostra()]
+    total = 0
+    for numero, inicio in enumerate(range(0, len(tags), TAMANHO_LOTE), start=1):
+        battlelogs = coletar_battlelogs(tags[inicio:inicio + TAMANHO_LOTE])
+        enviar_r2(salvar_bruto(FONTE, battlelogs, f"lote{numero:02d}"))
+        total += len(battlelogs)
+        print(f"lote {numero}: {len(battlelogs)} battlelogs")
+    return total
 
 
 def extrair_participantes(battlelogs):
@@ -48,11 +67,13 @@ def salvar_candidatos(menor_trofeu):
     enviar_r2(ARQUIVO_CANDIDATOS, CHAVE_CANDIDATOS)
 
 
-if __name__ == "__main__":
+def montar_candidatos(quantidade=2000):
+    # rodado uma vez em 19/10: mediu o battlelog (0,444 s por chamada, 4,0 KB por jogador)
+    # e montou o pool de candidatos a partir dos participantes das batalhas
     baixar_r2(CHAVE_PAINEL, ARQUIVO_PAINEL)
     with open(ARQUIVO_PAINEL, newline="", encoding="utf-8") as f:
         tags = [linha["tag"] for linha in csv.DictReader(f)]
-    amostra = random.Random(42).sample(tags, 2000)
+    amostra = random.Random(42).sample(tags, quantidade)
 
     inicio = time.perf_counter()
     battlelogs = {}
@@ -66,7 +87,7 @@ if __name__ == "__main__":
     segundos = time.perf_counter() - inicio
 
     # teste de medição: fica só no disco local, fora do R2
-    arquivo = salvar_bruto("brawl_battlelogs", battlelogs, "teste")
+    arquivo = salvar_bruto(FONTE, battlelogs, "teste")
     print(len(battlelogs), "battlelogs em", round(segundos / 60, 1), "min")
     print(round(segundos / len(amostra), 3), "s por chamada")
     print(round(arquivo.stat().st_size / 1024 / len(battlelogs), 1), "KB por jogador (.json.gz)")
@@ -74,3 +95,9 @@ if __name__ == "__main__":
     candidatos = extrair_participantes(battlelogs)
     salvar_candidatos(candidatos)
     print(len(candidatos), "candidatos em", ARQUIVO_CANDIDATOS)
+
+
+if __name__ == "__main__":
+    inicio = time.perf_counter()
+    total = coletar_dia()
+    print(f"{total} battlelogs em {(time.perf_counter() - inicio) / 60:.1f} min")
