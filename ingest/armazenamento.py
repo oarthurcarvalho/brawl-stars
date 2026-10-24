@@ -1,7 +1,7 @@
 import gzip
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import boto3
@@ -56,6 +56,47 @@ def baixar_r2(chave, arquivo):
             return False
         raise
     return True
+
+
+def partes_enviadas(fonte, dia):
+    resposta = cliente_r2().list_objects_v2(Bucket=BUCKET, Prefix=f"raw/{fonte}/dt={dia}/")
+    # raw/brawl_battlelogs/dt=2026-10-22/lote03_091502.json.gz -> lote03
+    return {objeto["Key"].rsplit("/", 1)[1].split("_")[0] for objeto in resposta.get("Contents", [])}
+
+
+def tamanho_no_r2(chave, cliente):
+    try:
+        return cliente.head_object(Bucket=BUCKET, Key=chave)["ContentLength"]
+    except ClientError as erro:
+        if erro.response["Error"]["Code"] in ("404", "NoSuchKey"):
+            return None
+        raise
+
+
+def limpar_local(dias=7, simular=False):
+    # o disco do Pi guarda só os últimos dias; o R2 guarda tudo. Só os brutos: o painel/ é estado
+    limite = datetime.now(timezone.utc).date() - timedelta(days=dias)
+    cliente = cliente_r2()
+    apagados = 0
+    for arquivo in sorted(COLETA_DIR.glob("*/dt=*/*.json.gz")):
+        # a idade vem da partição (data da coleta), não da data de modificação do arquivo
+        if date.fromisoformat(arquivo.parent.name.removeprefix("dt=")) > limite:
+            continue
+        chave = "raw/" + arquivo.relative_to(COLETA_DIR).as_posix()
+        # só apaga o que tem cópia inteira no R2; tamanho diferente = envio que ficou pela metade
+        if tamanho_no_r2(chave, cliente) != arquivo.stat().st_size:
+            print(f"mantém {chave}: não está no R2 ou está diferente")
+            continue
+        if simular:
+            print(f"apagaria {chave}")
+        else:
+            arquivo.unlink()
+        apagados += 1
+    if not simular:
+        for pasta in COLETA_DIR.glob("*/dt=*"):
+            if not any(pasta.iterdir()):
+                pasta.rmdir()
+    return apagados
 
 
 if __name__ == "__main__":
