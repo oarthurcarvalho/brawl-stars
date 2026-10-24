@@ -31,8 +31,8 @@ def coletar_perfil(tag):
     return resposta.json()
 
 
-def coletar_perfis(tags):
-    return coletar_em_paralelo(coletar_perfil, tags)
+def coletar_perfis(tags, threads=5):
+    return coletar_em_paralelo(coletar_perfil, tags, threads=threads)
 
 
 def conta_jogada(perfil):
@@ -62,6 +62,8 @@ def trofeus_validos(perfis):
 
 
 def ler_coletados():
+    # lê os lotes do pool do disco local, e o limpar_local apaga brutos com mais de 7 dias (estão no R2).
+    # Serviu para montar o pool e a amostra em 20 e 21/10; o que roda depois não deve depender dele
     coletados, trofeus = set(), {}
     for arquivo in arquivos_do_pool():
         with gzip.open(arquivo, "rt", encoding="utf-8") as f:
