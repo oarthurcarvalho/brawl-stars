@@ -1,17 +1,17 @@
 import csv
 import random
 import time
+from datetime import datetime, timezone
 
 import requests
 
-from amostra import ler_amostra
+from amostra import lotes_da_amostra
 from api import codificar_tag, coletar_em_paralelo, requisitar
-from armazenamento import baixar_r2, enviar_r2, salvar_bruto
+from armazenamento import baixar_r2, enviar_r2, partes_enviadas, salvar_bruto
 from painel import ARQUIVO_PAINEL, CHAVE_PAINEL
 from perfis import ARQUIVO_CANDIDATOS, CHAVE_CANDIDATOS
 
 FONTE = "brawl_battlelogs"
-TAMANHO_LOTE = 1000
 # medido em 21/10: 5 threads -> 15 a 25 min para 10 mil; 10 threads -> ~9 min, sem nenhum 429
 THREADS = 10
 
@@ -29,13 +29,18 @@ def coletar_battlelogs(tags):
 
 
 def coletar_dia():
-    tags = [linha["tag"] for linha in ler_amostra()]
+    # retomada: num retry da DAG, os lotes que já subiram hoje não são coletados de novo.
+    # Funciona porque a amostra é fixa: o lote03 é sempre o mesmo grupo de 1.000 jogadores
+    ja_enviados = partes_enviadas(FONTE, datetime.now(timezone.utc).date().isoformat())
     total = 0
-    for numero, inicio in enumerate(range(0, len(tags), TAMANHO_LOTE), start=1):
-        battlelogs = coletar_battlelogs(tags[inicio:inicio + TAMANHO_LOTE])
-        enviar_r2(salvar_bruto(FONTE, battlelogs, f"lote{numero:02d}"))
+    for parte, tags in lotes_da_amostra():
+        if parte in ja_enviados:
+            print(f"{parte}: já está no R2, pulando")
+            continue
+        battlelogs = coletar_battlelogs(tags)
+        enviar_r2(salvar_bruto(FONTE, battlelogs, parte))
         total += len(battlelogs)
-        print(f"lote {numero}: {len(battlelogs)} battlelogs")
+        print(f"{parte}: {len(battlelogs)} battlelogs")
     return total
 
 
