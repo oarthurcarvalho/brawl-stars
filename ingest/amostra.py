@@ -3,8 +3,8 @@ import random
 from collections import Counter
 from datetime import datetime, timezone
 
-from armazenamento import COLETA_DIR, baixar_r2, enviar_r2
-from perfis import FAIXAS, faixa, ler_coletados
+from armazenamento import COLETA_DIR, baixar_r2, enviar_r2, partes_enviadas, salvar_bruto
+from perfis import FAIXAS, FONTE as FONTE_PERFIS, coletar_perfis, faixa, ler_coletados
 
 ARQUIVO_AMOSTRA = COLETA_DIR / "painel" / "amostra.csv"
 CHAVE_AMOSTRA = "painel/amostra.csv"
@@ -37,6 +37,37 @@ def ler_amostra():
         raise RuntimeError(f"{CHAVE_AMOSTRA} não está no R2; rode escolher_amostra() antes")
     with open(ARQUIVO_AMOSTRA, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
+
+
+def lotes_da_amostra(tamanho=1000):
+    linhas = ler_amostra()
+    # as 9.999 originais e os novatos em lotes separados: os novatos entram no fim do CSV toda semana,
+    # e fatiar só pela posição mudaria o lote10 (que tem 999). Assim lote01..lote10 nunca mudam
+    grupos = [
+        ("lote", [l["tag"] for l in linhas if l["faixa"] != "novato"]),
+        ("novatos", [l["tag"] for l in linhas if l["faixa"] == "novato"]),
+    ]
+    lotes = []
+    for prefixo, tags in grupos:
+        for numero, inicio in enumerate(range(0, len(tags), tamanho), start=1):
+            lotes.append((f"{prefixo}{numero:02d}", tags[inicio:inicio + tamanho]))
+    return lotes
+
+
+def coletar_perfis_amostra():
+    # perfis semanais da amostra (domingo): daqui saem as features da segmentação.
+    # Mesma retomada do battlelog: num retry, as partes que já subiram hoje são puladas
+    ja_enviados = partes_enviadas(FONTE_PERFIS, datetime.now(timezone.utc).date().isoformat())
+    total = 0
+    for parte, tags in lotes_da_amostra():
+        if parte in ja_enviados:
+            print(f"{parte}: já está no R2, pulando")
+            continue
+        perfis = coletar_perfis(tags, threads=10)
+        enviar_r2(salvar_bruto(FONTE_PERFIS, perfis, parte))
+        total += len(perfis)
+        print(f"{parte}: {len(perfis)} perfis")
+    return total
 
 
 def escolher_amostra():
