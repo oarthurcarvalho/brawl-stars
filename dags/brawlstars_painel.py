@@ -29,7 +29,17 @@ def brawlstars_painel():
 
         return montar_painel()
 
-    montar(PASTA_INGEST)
+    @task.external_python(python=PYTHON_BRAWL, expect_airflow=False)
+    def novatos(pasta_ingest):
+        import sys
+
+        sys.path.insert(0, pasta_ingest)
+        from novatos import achar_novatos
+
+        return achar_novatos(limite=300)
+
+    # segunda: painel (~25 min) e novatos (~5 min) terminam antes das 6h, quando o battlelog lê a amostra
+    montar(PASTA_INGEST) >> novatos(PASTA_INGEST)
 
 
 brawlstars_painel()
