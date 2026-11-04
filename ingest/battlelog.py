@@ -19,7 +19,8 @@ THREADS = 10
 def coletar_battlelog(tag):
     resposta = requisitar(f"/players/{codificar_tag(tag)}/battlelog")
     if resposta.status_code == 404:
-        return None
+        # desde 03/11/2026 a API responde 404 para quem não jogou recentemente
+        return {"items": []}
     resposta.raise_for_status()
     return resposta.json()
 
