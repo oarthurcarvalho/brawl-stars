@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pendulum
 from airflow.decorators import dag, task
+from falhas import avisar_falha
 
 # o repositório é montado no container no mesmo caminho do Pi e a DAG entra na pasta de DAGs
 # por link simbólico, então resolve() aponta para o repositório tanto no Pi quanto no container
@@ -16,7 +17,12 @@ PYTHON_BRAWL = str(REPO / ".venv" / "bin" / "python")
     schedule="0 5 * * 1",
     start_date=pendulum.datetime(2026, 10, 12, tz="America/Sao_Paulo"),
     catchup=False,
-    default_args={"retries": 2, "retry_delay": pendulum.duration(minutes=15)},
+    default_args={
+        "retries": 2,
+        "retry_delay": pendulum.duration(minutes=15),
+        # mensagem no Telegram quando uma tarefa falha depois dos retries
+        "on_failure_callback": avisar_falha,
+    },
     tags=["brawl-stars"],
 )
 def brawlstars_painel():
