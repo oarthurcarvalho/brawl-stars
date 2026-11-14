@@ -8,7 +8,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API = "https://api.brawlstars.com/v1"
+# a chave da API só aceita os IPs cadastrados, e o IP de casa muda quando a internet cai.
+# Com BRAWL_API=https://bsproxy.royaleapi.dev/v1 as chamadas saem pelo proxy da RoyaleAPI,
+# que tem IP fixo; sem a variável, vai direto na API oficial
+API = os.environ.get("BRAWL_API", "https://api.brawlstars.com/v1")
 
 # reaproveita a conexão entre chamadas: ~0,3 s por chamada em vez de ~0,8 s
 sessao = requests.Session()
